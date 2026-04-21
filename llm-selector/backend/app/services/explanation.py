@@ -8,6 +8,9 @@ USE_CASE_LABELS = {
     "general":  "general-purpose tasks",
     "chat":     "conversational chat",
     "analysis": "data analysis and reasoning",
+    "image":    "image understanding tasks",
+    "audio":    "audio understanding tasks",
+    "video":    "video understanding tasks",
 }
 
 
@@ -101,13 +104,13 @@ def _build_checks(
     return checks
 
 
-def build_user_summary(
-    use_case: str,
-    budget: Optional[float],
-    required_features: List[str],
-    min_context: int,
-    speed_vs_quality: int,
-) -> str:
+def build_user_summary(req: Dict) -> str:
+    use_case = req.get("use_case", "general")
+    budget = req.get("budget")
+    required_features = req.get("required_features", [])
+    min_context = req.get("min_context", 0)
+    speed_vs_quality = req.get("speed_vs_quality", 50)
+
     lines = [f"- Task type: {USE_CASE_LABELS.get(use_case, use_case)}"]
     if budget is not None:
         lines.append(f"- Budget: up to ${budget:.2f}/1M tokens")
@@ -121,6 +124,20 @@ def build_user_summary(
         lines.append(f"- Required features: {', '.join(required_features)}")
     if min_context > 0:
         lines.append(f"- Minimum context: {min_context:,} tokens")
+    if req.get("latency_requirement"):
+        lines.append(f"- Latency requirement: {req['latency_requirement']}")
+    if req.get("accuracy_requirement"):
+        lines.append(f"- Accuracy requirement: {req['accuracy_requirement']}")
+    if req.get("reasoning_complexity"):
+        lines.append(f"- Reasoning complexity: {req['reasoning_complexity']}")
+    if req.get("input_data_type"):
+        lines.append(f"- Input data type: {req['input_data_type']}")
+    if req.get("output_format"):
+        lines.append(f"- Output format: {req['output_format']}")
+    if req.get("privacy_requirement"):
+        lines.append(f"- Privacy requirement: {req['privacy_requirement']}")
+    if req.get("domain_specificity"):
+        lines.append(f"- Domain focus: {req['domain_specificity']}")
 
     return "\n".join(lines)
 
@@ -133,6 +150,7 @@ def explain(
     required_features: List[str],
     min_context: int,
     speed_vs_quality: int,
+    request_context: Optional[Dict] = None,
 ) -> Dict:
     score = model.get("_score", 0)
     match_label, match_color = _match_label(score)
@@ -150,6 +168,7 @@ def explain(
         "contributions": {
             "quality": model.get("_quality_contribution", 0),
             "speed":   model.get("_speed_contribution", 0),
+            "latency": model.get("_latency_contribution", 0),
             "cost":    model.get("_cost_contribution", 0),
             "context": model.get("_context_contribution", 0),
         },
@@ -168,4 +187,5 @@ def explain(
             "supports_json_mode":     model.get("supports_json_mode", False),
             "ttft":                   model.get("ttft", 500),
         },
+        "request_context": request_context or {},
     }

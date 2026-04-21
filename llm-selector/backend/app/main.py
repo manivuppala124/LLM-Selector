@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import auth, models, recommend, calculator, compare, sync
+from app.routes import auth, models, recommend, calculator, sync, prompt_lab
 from app.db.mongo import ensure_indexes
 
 
@@ -29,8 +29,8 @@ app.include_router(auth.router,        prefix="/api/auth",      tags=["auth"])
 app.include_router(models.router,      prefix="/api/models",    tags=["models"])
 app.include_router(recommend.router,   prefix="/api/recommend", tags=["recommend"])
 app.include_router(calculator.router,  prefix="/api/calculate", tags=["calculate"])
-app.include_router(compare.router,     prefix="/api/compare",   tags=["compare"])
 app.include_router(sync.router,        prefix="/api/sync",      tags=["sync"])
+app.include_router(prompt_lab.router,  prefix="/api/prompt-lab", tags=["prompt-lab"])
 
 
 @app.get("/api/health")

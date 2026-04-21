@@ -19,6 +19,20 @@ try:
 except Exception:
     MODEL_MAP = {}
 
+MODEL_DEFAULTS = {
+    "intelligence_index": 60,
+    "coding_index": 55,
+    "agentic_index": 50,
+    "tokens_per_second": 60,
+    "ttft": 500,
+    "supports_fine_tuning": False,
+    "reliability_score": 0.0,
+    "deployment_constraints": [],
+    "integration_constraints": [],
+    "supported_sdks": [],
+    "regions": [],
+}
+
 
 @router.post("/openrouter")
 async def sync_openrouter(_: str = Depends(get_current_user)):
@@ -30,6 +44,8 @@ async def sync_openrouter(_: str = Depends(get_current_user)):
     ops = []
     for m in models:
         m["last_updated"] = datetime.now(timezone.utc)
+        for key, value in MODEL_DEFAULTS.items():
+            m.setdefault(key, value)
         ops.append(
             UpdateOne({"id": m["id"]}, {"$set": m}, upsert=True)
         )
@@ -71,9 +87,27 @@ async def sync_aa(_: str = Depends(get_current_user)):
     return {"updated": updated}
 
 
+@router.post("/backfill")
+async def backfill_model_defaults(_: str = Depends(get_current_user)):
+    """
+    Backfill default fields in existing Mongo model documents so new
+    recommendation filters/weights always have predictable inputs.
+    """
+    modified = 0
+    for key, value in MODEL_DEFAULTS.items():
+        result = models_col.update_many(
+            {key: {"$exists": False}},
+            {"$set": {key: value, "last_updated": datetime.now(timezone.utc)}},
+        )
+        modified += result.modified_count
+
+    return {"updated_fields": len(MODEL_DEFAULTS), "modified_docs": modified}
+
+
 @router.post("/all")
 async def sync_all(user: str = Depends(get_current_user)):
     """Convenience: run both syncs in sequence."""
     or_result  = await sync_openrouter(user)
     aa_result  = await sync_aa(user)
-    return {"openrouter": or_result, "aa": aa_result}
+    backfill_result = await backfill_model_defaults(user)
+    return {"openrouter": or_result, "aa": aa_result, "backfill": backfill_result}

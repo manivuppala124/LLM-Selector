@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Calculator, GitCompare, History, RefreshCw, Loader2, ChevronRight } from "lucide-react";
+import { Zap, Calculator, History, RefreshCw, Loader2, ChevronRight, FlaskConical } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useFormStore } from "../store/formStore";
 import { getHistory, syncAll } from "../api/models";
@@ -17,16 +17,16 @@ const CARDS = [
     action: "/calculator", cta: "Calculate Cost",
   },
   {
-    icon: GitCompare, color: "green", title: "Compare Models",
-    desc: "Side-by-side comparison of up to 3 models across all key metrics.",
-    action: "/compare", cta: "Compare Now",
+    icon: FlaskConical, color: "cyan", title: "Prompt Lab",
+    desc: "Run a live prompt against one or more models and inspect output, latency, and cost.",
+    action: "/prompt-lab", cta: "Test Prompt",
   },
 ];
 
 const COLOR = {
   blue:   "bg-blue-600/10 text-blue-400 border-blue-800",
   purple: "bg-purple-600/10 text-purple-400 border-purple-800",
-  green:  "bg-green-600/10 text-green-400 border-green-800",
+  cyan:   "bg-cyan-600/10 text-cyan-400 border-cyan-800",
 };
 
 export default function Dashboard() {
@@ -93,7 +93,7 @@ export default function Dashboard() {
       )}
 
       {/* Feature cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         {CARDS.map(({ icon: Icon, color, title, desc, action, cta }) => (
           <div key={title} className="card hover:border-gray-700 transition-colors group cursor-pointer" onClick={() => navigate(action)}>
             <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg border mb-4 ${COLOR[color]}`}>
@@ -131,6 +131,16 @@ export default function Dashboard() {
                     <span className="badge bg-gray-800 text-gray-400 border border-gray-700">
                       Speed/Quality: {h.requirements?.speed_vs_quality}
                     </span>
+                    {h.requirements?.latency_requirement && (
+                      <span className="badge bg-gray-800 text-gray-400 border border-gray-700">
+                        Latency: {h.requirements.latency_requirement}
+                      </span>
+                    )}
+                    {h.requirements?.privacy_requirement && (
+                      <span className="badge bg-gray-800 text-gray-400 border border-gray-700">
+                        Privacy: {h.requirements.privacy_requirement}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1.5">
                     {new Date(h.created_at).toLocaleString()}

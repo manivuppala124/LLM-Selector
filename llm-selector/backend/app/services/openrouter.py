@@ -57,6 +57,11 @@ async def fetch_openrouter_models() -> List[Dict]:
         provider = model_id.split("/")[0] if "/" in model_id else "unknown"
         arch = m.get("architecture", {}) or {}
         modality = arch.get("modality", "") or ""
+        supported_parameters = m.get("supported_parameters", []) or []
+        supports_fine_tuning = any(
+            "fine" in str(p).lower() and "tune" in str(p).lower()
+            for p in supported_parameters
+        )
 
         models.append({
             "id": model_id,
@@ -74,6 +79,12 @@ async def fetch_openrouter_models() -> List[Dict]:
                 or "vision" in modality.lower()
             ),
             "is_open_source": provider in OPEN_SOURCE_PROVIDERS,
+            "supports_fine_tuning": supports_fine_tuning,
+            "reliability_score": m.get("reliability_score", 0.0),
+            "deployment_constraints": m.get("deployment_constraints", []),
+            "integration_constraints": m.get("integration_constraints", []),
+            "supported_sdks": m.get("supported_sdks", []),
+            "regions": m.get("regions", []),
             "description": m.get("description", ""),
         })
 

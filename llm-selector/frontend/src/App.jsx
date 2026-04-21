@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RequirementsForm from "./pages/RequirementsForm";
 import Results from "./pages/Results";
 import Calculator from "./pages/Calculator";
-import Compare from "./pages/Compare";
+import PromptLab from "./pages/PromptLab";
 import { useAuthStore } from "./store/authStore";
 
 function Layout({ children }) {
@@ -25,6 +26,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={token ? <Navigate to="/dashboard" /> : <Landing />} />
         <Route path="/login"    element={token ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/register" element={token ? <Navigate to="/dashboard" /> : <Register />} />
 
@@ -40,11 +42,11 @@ export default function App() {
         <Route path="/calculator" element={
           <ProtectedRoute><Layout><Calculator /></Layout></ProtectedRoute>
         } />
-        <Route path="/compare" element={
-          <ProtectedRoute><Layout><Compare /></Layout></ProtectedRoute>
+        <Route path="/prompt-lab" element={
+          <ProtectedRoute><Layout><PromptLab /></Layout></ProtectedRoute>
         } />
 
-        <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+        <Route path="*" element={<Navigate to={token ? "/dashboard" : "/"} />} />
       </Routes>
     </BrowserRouter>
   );

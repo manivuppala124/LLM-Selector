@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Code2, MessageSquare, Bot, BarChart2, Sparkles, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Code2, MessageSquare, Bot, BarChart2, Sparkles, ImageIcon, AudioLines, Video, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
 import { useFormStore } from "../store/formStore";
 import { recommend } from "../api/models";
@@ -11,6 +11,9 @@ const USE_CASES = [
   { id: "chat",     icon: MessageSquare, label: "Chat / Q&A", desc: "Conversational AI, support bots" },
   { id: "agentic",  icon: Bot,           label: "Agentic",   desc: "Autonomous agents, tool use" },
   { id: "analysis", icon: BarChart2,     label: "Analysis",  desc: "Data analysis, reasoning, math" },
+  { id: "image",    icon: ImageIcon,     label: "Image",     desc: "Image understanding, OCR, visual tasks" },
+  { id: "audio",    icon: AudioLines,    label: "Audio",     desc: "Speech/audio understanding workflows" },
+  { id: "video",    icon: Video,         label: "Video",     desc: "Video understanding and scene analysis" },
   { id: "general",  icon: Sparkles,      label: "General",   desc: "Mixed / general-purpose use" },
 ];
 
@@ -30,9 +33,19 @@ const CONTEXT_OPTIONS = [
   { value: 200000, label: "200K+" },
 ];
 
+const SIMPLE_OPTIONS = {
+  input_data_type: ["text", "code", "image", "audio", "video"],
+  output_format: ["text", "json", "schema", "tool_call"],
+  accuracy_requirement: ["low", "medium", "high"],
+  reasoning_complexity: ["simple", "medium", "complex"],
+  latency_requirement: ["real-time", "interactive", "batch"],
+  reliability_requirement: ["low", "medium", "high"],
+  privacy_requirement: ["standard", "strict", "local_only"],
+};
+
 // Step progress bar
 function Steps({ current }) {
-  const steps = ["Use Case", "Budget", "Speed/Quality", "Features", "Review"];
+  const steps = ["Use Case", "Budget", "Speed/Quality", "Features", "Workload", "Constraints", "Review"];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((s, i) => (
@@ -61,6 +74,10 @@ export default function RequirementsForm() {
   const navigate = useNavigate();
   const {
     step, use_case, budget, speed_vs_quality, required_features, min_context,
+    input_data_type, input_size_avg_tokens, input_size_max_tokens, output_format, output_length,
+    accuracy_requirement, reasoning_complexity, latency_requirement, throughput_requirement,
+    reliability_requirement, fine_tuning_requirement, rag_usage, domain_specificity,
+    privacy_requirement, deployment_constraints, integration_constraints,
     setField, nextStep, prevStep, setResults,
   } = useFormStore();
 
@@ -75,6 +92,12 @@ export default function RequirementsForm() {
     );
   };
 
+  const parseCsv = (value) =>
+    value
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+
   const handleSubmit = async () => {
     setLoading(true);
     setError("");
@@ -85,6 +108,22 @@ export default function RequirementsForm() {
         speed_vs_quality,
         required_features,
         min_context,
+        input_data_type: input_data_type || null,
+        input_size_avg_tokens: input_size_avg_tokens ? Number(input_size_avg_tokens) : null,
+        input_size_max_tokens: input_size_max_tokens ? Number(input_size_max_tokens) : null,
+        output_format: output_format || null,
+        output_length: output_length ? Number(output_length) : null,
+        accuracy_requirement: accuracy_requirement || null,
+        reasoning_complexity: reasoning_complexity || null,
+        latency_requirement: latency_requirement || null,
+        throughput_requirement: throughput_requirement ? Number(throughput_requirement) : null,
+        reliability_requirement: reliability_requirement || null,
+        fine_tuning_requirement,
+        rag_usage,
+        domain_specificity: domain_specificity || null,
+        privacy_requirement: privacy_requirement || null,
+        deployment_constraints,
+        integration_constraints,
       });
       setResults(data.results, data.user_summary);
       navigate("/results");
@@ -269,6 +308,82 @@ export default function RequirementsForm() {
 
         {/* ── Step 5: Review ─────────────────────────────────────────────────── */}
         {step === 5 && (
+          <div className="flex-1 space-y-5">
+            <h2 className="text-lg font-semibold text-white">Workload Details</h2>
+            <p className="text-sm text-gray-400">These inputs help refine context, cost and quality trade-offs.</p>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <SelectField label="Input Data Type" value={input_data_type} onChange={(v) => setField("input_data_type", v)} options={SIMPLE_OPTIONS.input_data_type} />
+              <SelectField label="Output Format" value={output_format} onChange={(v) => setField("output_format", v)} options={SIMPLE_OPTIONS.output_format} />
+              <SelectField label="Accuracy Need" value={accuracy_requirement} onChange={(v) => setField("accuracy_requirement", v)} options={SIMPLE_OPTIONS.accuracy_requirement} />
+              <SelectField label="Reasoning Complexity" value={reasoning_complexity} onChange={(v) => setField("reasoning_complexity", v)} options={SIMPLE_OPTIONS.reasoning_complexity} />
+              <SelectField label="Latency Profile" value={latency_requirement} onChange={(v) => setField("latency_requirement", v)} options={SIMPLE_OPTIONS.latency_requirement} />
+              <SelectField label="Reliability Need" value={reliability_requirement} onChange={(v) => setField("reliability_requirement", v)} options={SIMPLE_OPTIONS.reliability_requirement} />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <InputField label="Avg Input Tokens" value={input_size_avg_tokens} onChange={(v) => setField("input_size_avg_tokens", v)} />
+              <InputField label="Max Input Tokens" value={input_size_max_tokens} onChange={(v) => setField("input_size_max_tokens", v)} />
+              <InputField label="Expected Output Tokens" value={output_length} onChange={(v) => setField("output_length", v)} />
+              <InputField label="Throughput (req/min)" value={throughput_requirement} onChange={(v) => setField("throughput_requirement", v)} />
+            </div>
+
+            <div>
+              <label className="label">Domain Focus (optional)</label>
+              <input
+                className="input"
+                placeholder="e.g. coding, legal, finance, support"
+                value={domain_specificity}
+                onChange={(e) => setField("domain_specificity", e.target.value)}
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <BooleanToggle
+                label="Need Fine-Tuning Support"
+                checked={fine_tuning_requirement}
+                onToggle={() => setField("fine_tuning_requirement", !fine_tuning_requirement)}
+              />
+              <BooleanToggle
+                label="RAG / Tool Usage"
+                checked={rag_usage}
+                onToggle={() => setField("rag_usage", !rag_usage)}
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 6 && (
+          <div className="flex-1 space-y-5">
+            <h2 className="text-lg font-semibold text-white">Constraints</h2>
+            <p className="text-sm text-gray-400">Optional deployment and integration constraints (comma-separated).</p>
+
+            <SelectField label="Privacy Requirement" value={privacy_requirement} onChange={(v) => setField("privacy_requirement", v)} options={SIMPLE_OPTIONS.privacy_requirement} />
+
+            <div>
+              <label className="label">Deployment Constraints</label>
+              <input
+                className="input"
+                placeholder="e.g. us-east, eu-only, on-prem"
+                value={deployment_constraints.join(", ")}
+                onChange={(e) => setField("deployment_constraints", parseCsv(e.target.value))}
+              />
+            </div>
+
+            <div>
+              <label className="label">Integration Constraints</label>
+              <input
+                className="input"
+                placeholder="e.g. python, node, openai-compatible"
+                value={integration_constraints.join(", ")}
+                onChange={(e) => setField("integration_constraints", parseCsv(e.target.value))}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 7: Review ─────────────────────────────────────────────────── */}
+        {step === 7 && (
           <div className="flex-1 space-y-4">
             <h2 className="text-lg font-semibold text-white">Review & Submit</h2>
             <div className="bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
@@ -277,6 +392,12 @@ export default function RequirementsForm() {
               <Row label="Speed/Quality" value={`${speed_vs_quality}/100 ${speed_vs_quality < 30 ? "(speed-first)" : speed_vs_quality > 70 ? "(quality-first)" : "(balanced)"}`} />
               <Row label="Features"     value={required_features.length ? required_features.join(", ") : "None required"} />
               <Row label="Min Context"  value={min_context ? `${min_context.toLocaleString()} tokens` : "Any"} />
+              <Row label="Input Type"   value={input_data_type || "Not set"} />
+              <Row label="Output Format" value={output_format || "Not set"} />
+              <Row label="Accuracy / Reasoning" value={`${accuracy_requirement || "n/a"} / ${reasoning_complexity || "n/a"}`} />
+              <Row label="Latency / Throughput" value={`${latency_requirement || "n/a"} / ${throughput_requirement || "n/a"}`} />
+              <Row label="Fine-tuning / RAG" value={`${fine_tuning_requirement ? "yes" : "no"} / ${rag_usage ? "yes" : "no"}`} />
+              <Row label="Privacy" value={privacy_requirement || "standard"} />
             </div>
 
             {error && (
@@ -306,7 +427,7 @@ export default function RequirementsForm() {
             <ChevronLeft size={15} /> Back
           </button>
 
-          {step < 5 && (
+          {step < 7 && (
             <button
               onClick={nextStep}
               disabled={step === 1 && !use_case}
@@ -318,6 +439,52 @@ export default function RequirementsForm() {
         </div>
       </div>
     </div>
+  );
+}
+
+function SelectField({ label, value, onChange, options }) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <select className="input" value={value || ""} onChange={(e) => onChange(e.target.value || "")}>
+        <option value="">Not set</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function InputField({ label, value, onChange }) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <input
+        className="input"
+        type="number"
+        min="0"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
+      />
+    </div>
+  );
+}
+
+function BooleanToggle({ label, checked, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={clsx(
+        "text-left rounded-lg border px-3 py-2 text-sm transition-colors",
+        checked ? "bg-blue-600/10 border-blue-500 text-blue-300" : "bg-gray-800 border-gray-700 text-gray-300"
+      )}
+    >
+      {label}: <span className="font-semibold">{checked ? "Enabled" : "Disabled"}</span>
+    </button>
   );
 }
 

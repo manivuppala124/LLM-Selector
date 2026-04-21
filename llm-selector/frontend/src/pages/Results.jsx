@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trophy, CheckCircle2, XCircle, AlertCircle, Info, ChevronDown, ChevronUp, Zap, DollarSign, Brain, Layers } from "lucide-react";
+import { Trophy, CheckCircle2, XCircle, AlertCircle, Info, ChevronDown, ChevronUp, Zap, DollarSign, Brain, Layers, Timer } from "lucide-react";
 import { clsx } from "clsx";
 import { useFormStore } from "../store/formStore";
 import { RadialBarChart, RadialBar, ResponsiveContainer, Tooltip } from "recharts";
@@ -52,7 +52,19 @@ function ContribBar({ label, value, icon: Icon, color }) {
       <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all`}
-          style={{ width: `${Math.min(value, 100)}%`, background: color === "text-blue-400" ? "#3b82f6" : color === "text-green-400" ? "#22c55e" : color === "text-purple-400" ? "#a855f7" : "#f59e0b" }}
+          style={{
+            width: `${Math.min(value, 100)}%`,
+            background:
+              color === "text-blue-400"
+                ? "#3b82f6"
+                : color === "text-green-400"
+                ? "#22c55e"
+                : color === "text-purple-400"
+                ? "#a855f7"
+                : color === "text-pink-400"
+                ? "#f472b6"
+                : "#f59e0b",
+          }}
         />
       </div>
     </div>
@@ -117,6 +129,7 @@ function ModelCard({ result, index }) {
             <div className="space-y-2">
               <ContribBar label="Quality"  value={contributions.quality}  icon={Brain}       color="text-blue-400" />
               <ContribBar label="Speed"    value={contributions.speed}    icon={Zap}         color="text-green-400" />
+              <ContribBar label="Latency"  value={contributions.latency || 0} icon={Timer}   color="text-pink-400" />
               <ContribBar label="Cost"     value={contributions.cost}     icon={DollarSign}  color="text-purple-400" />
               <ContribBar label="Context"  value={contributions.context}  icon={Layers}      color="text-yellow-400" />
             </div>
@@ -209,8 +222,11 @@ export default function Results() {
         <button onClick={() => { reset(); navigate("/requirements"); }} className="btn-secondary text-sm">
           New Analysis
         </button>
-        <button onClick={() => navigate("/compare")} className="btn-secondary text-sm">
-          Compare These Models
+        <button
+          onClick={() => navigate("/prompt-lab", { state: { preselectedModelIds: results.slice(0, 3).map((r) => r.model_id) } })}
+          className="btn-secondary text-sm"
+        >
+          Test Prompt on Top Models
         </button>
         <button onClick={() => navigate("/calculator")} className="btn-secondary text-sm">
           Calculate Costs

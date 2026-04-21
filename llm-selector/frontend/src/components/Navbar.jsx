@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Bot, LayoutDashboard, Calculator, GitCompare, LogOut, Zap } from "lucide-react";
+import { Bot, LayoutDashboard, Calculator, LogOut, Zap, FlaskConical } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { clsx } from "clsx";
 
@@ -7,7 +7,7 @@ const NAV = [
   { to: "/dashboard",    label: "Dashboard",  icon: LayoutDashboard },
   { to: "/requirements", label: "Recommend",  icon: Zap },
   { to: "/calculator",   label: "Calculator", icon: Calculator },
-  { to: "/compare",      label: "Compare",    icon: GitCompare },
+  { to: "/prompt-lab",   label: "Prompt Lab", icon: FlaskConical },
 ];
 
 export default function Navbar() {

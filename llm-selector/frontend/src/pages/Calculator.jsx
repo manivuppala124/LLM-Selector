@@ -21,28 +21,47 @@ export default function Calculator() {
   const [error,    setError]    = useState("");
 
   useEffect(() => {
-    getModels({ limit: 200 })
+    getModels({ limit: 500 })
       .then((r) => {
         const sorted = r.data.models
           .filter((m) => m.input_price > 0 || m.output_price > 0)
           .sort((a, b) => a.name.localeCompare(b.name));
         setModels(sorted);
         if (sorted.length) setModelId(sorted[0].id);
+        else setError("No billable models available yet. Please run Sync Models from Dashboard.");
       })
       .catch(() => setError("Failed to load models. Is the backend running?"))
       .finally(() => setFetching(false));
   }, []);
 
   const handleCalc = async () => {
-    if (!modelId) return;
+    if (!modelId) {
+      setError("Please select a model.");
+      return;
+    }
+    const inTok = Number(inputTok);
+    const outTok = Number(outputTok);
+    const dailyReq = Number(daily);
+    if (!Number.isFinite(inTok) || inTok < 1 || !Number.isInteger(inTok)) {
+      setError("Input tokens must be a whole number greater than 0.");
+      return;
+    }
+    if (!Number.isFinite(outTok) || outTok < 1 || !Number.isInteger(outTok)) {
+      setError("Output tokens must be a whole number greater than 0.");
+      return;
+    }
+    if (!Number.isFinite(dailyReq) || dailyReq < 1 || !Number.isInteger(dailyReq)) {
+      setError("Daily requests must be a whole number greater than 0.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const { data } = await calculate({
         model_id:       modelId,
-        input_tokens:   Number(inputTok),
-        output_tokens:  Number(outputTok),
-        daily_requests: Number(daily),
+        input_tokens:   inTok,
+        output_tokens:  outTok,
+        daily_requests: dailyReq,
       });
       setResult(data);
     } catch (e) {
@@ -68,6 +87,10 @@ export default function Calculator() {
           {fetching ? (
             <div className="input flex items-center gap-2 text-gray-500">
               <Loader2 size={14} className="animate-spin" /> Loading models…
+            </div>
+          ) : models.length === 0 ? (
+            <div className="input text-gray-500">
+              No priced models found. Sync model data and try again.
             </div>
           ) : (
             <select
@@ -132,7 +155,7 @@ export default function Calculator() {
           </div>
         )}
 
-        <button onClick={handleCalc} disabled={loading || !modelId} className="btn-primary w-full flex items-center justify-center gap-2">
+        <button onClick={handleCalc} disabled={loading || !modelId || models.length === 0} className="btn-primary w-full flex items-center justify-center gap-2">
           {loading && <Loader2 size={15} className="animate-spin" />}
           Calculate
         </button>

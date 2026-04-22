@@ -1,8 +1,13 @@
-from fastapi import APIRouter, Depends, Query
+from typing import List
+from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel, Field
 from app.db.mongo import models_col
 from app.routes.auth import get_current_user
 
 router = APIRouter()
+
+class CompareRequest(BaseModel):
+    model_ids: List[str] = Field(..., min_length=2, max_length=5)
 
 
 def _clean(m: dict) -> dict:
@@ -68,10 +73,32 @@ def model_field_coverage(_: str = Depends(get_current_user)):
     }
 
 
+@router.post("/compare")
+def compare_models(req: CompareRequest, user: str = Depends(get_current_user)):
+    """
+    Fetch a small set of models by id and return all fields needed for a
+    comparison view (cost, quality indexes, speed, context, flags, etc.).
+    Preserve the order of req.model_ids.
+    """
+    docs = list(models_col.find({"id": {"$in": req.model_ids}}, {"_id": 0}))
+    by_id = {d["id"]: d for d in docs}
+    missing = [mid for mid in req.model_ids if mid not in by_id]
+    if missing:
+        raise HTTPException(404, f"Unknown model(s): {', '.join(missing)}")
+
+    result = []
+    for mid in req.model_ids:
+        m = by_id[mid].copy()
+        blended_per_1m = (m.get("blended_price", 0) or 0) * 1_000_000
+        m["blended_per_1m"] = round(blended_per_1m, 4)
+        result.append(m)
+
+    return {"models": result}
+
+
 @router.get("/{model_id:path}")
 def get_model(model_id: str, _: str = Depends(get_current_user)):
     doc = models_col.find_one({"id": model_id}, {"_id": 0})
     if not doc:
-        from fastapi import HTTPException
         raise HTTPException(404, f"Model '{model_id}' not found")
     return doc

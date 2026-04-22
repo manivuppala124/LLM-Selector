@@ -1,26 +1,31 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Code2, MessageSquare, Bot, BarChart2, Sparkles, ImageIcon, AudioLines, Video, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Code2, MessageSquare, Bot, BarChart2, Sparkles, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
 import { useFormStore } from "../store/formStore";
 import { recommend } from "../api/models";
 
-// ─── Step 1: Use Case ────────────────────────────────────────────────────────
-const USE_CASES = [
-  { id: "coding",   icon: Code2,         label: "Coding",    desc: "Code generation, review, debugging" },
-  { id: "chat",     icon: MessageSquare, label: "Chat / Q&A", desc: "Conversational AI, support bots" },
-  { id: "agentic",  icon: Bot,           label: "Agentic",   desc: "Autonomous agents, tool use" },
-  { id: "analysis", icon: BarChart2,     label: "Analysis",  desc: "Data analysis, reasoning, math" },
-  { id: "image",    icon: ImageIcon,     label: "Image",     desc: "Image understanding, OCR, visual tasks" },
-  { id: "audio",    icon: AudioLines,    label: "Audio",     desc: "Speech/audio understanding workflows" },
-  { id: "video",    icon: Video,         label: "Video",     desc: "Video understanding and scene analysis" },
-  { id: "general",  icon: Sparkles,      label: "General",   desc: "Mixed / general-purpose use" },
+// ─── Step 1: Task Type ───────────────────────────────────────────────────────
+const TASK_TYPES = [
+  { id: "coding",   icon: Code2,         label: "Coding Assistant",    desc: "Code generation, review, debugging" },
+  { id: "chat",     icon: MessageSquare, label: "Chat / Support Bot",  desc: "User-facing chatbots and support flows" },
+  { id: "analysis", icon: BarChart2,     label: "RAG / QA & Analysis", desc: "Question answering over docs, data analysis" },
+  { id: "agentic",  icon: Bot,           label: "Agents / Tools",      desc: "Tool-calling agents, workflows, automations" },
+  { id: "general",  icon: Sparkles,      label: "Content Generation",  desc: "Blogs, marketing copy, creative writing" },
+  { id: "other",    icon: Sparkles,      label: "Other / Mixed",       desc: "Mixed or experimental use cases" },
+];
+
+const MODALITIES = [
+  { id: "text",  label: "Text",  desc: "Plain text prompts and responses" },
+  { id: "code",  label: "Code",  desc: "Primarily code as input/output" },
+  { id: "image", label: "Image", desc: "Images or screenshots as input" },
+  { id: "audio", label: "Audio", desc: "Speech or audio as input" },
+  { id: "video", label: "Video", desc: "Video frames / scenes as input" },
 ];
 
 const FEATURES = [
   { id: "function_calling", label: "Function Calling", desc: "Tool / function use" },
   { id: "json_mode",        label: "JSON Mode",         desc: "Structured JSON output" },
-  { id: "multimodal",       label: "Multimodal",        desc: "Image / vision support" },
 ];
 
 const CONTEXT_OPTIONS = [
@@ -40,12 +45,11 @@ const SIMPLE_OPTIONS = {
   reasoning_complexity: ["simple", "medium", "complex"],
   latency_requirement: ["real-time", "interactive", "batch"],
   reliability_requirement: ["low", "medium", "high"],
-  privacy_requirement: ["standard", "strict", "local_only"],
 };
 
 // Step progress bar
 function Steps({ current }) {
-  const steps = ["Use Case", "Budget", "Speed/Quality", "Features", "Workload", "Constraints", "Review"];
+  const steps = ["Use Case", "Budget", "Speed/Quality", "Features", "Workload", "Review"];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((s, i) => (
@@ -77,7 +81,6 @@ export default function RequirementsForm() {
     input_data_type, input_size_avg_tokens, input_size_max_tokens, output_format, output_length,
     accuracy_requirement, reasoning_complexity, latency_requirement, throughput_requirement,
     reliability_requirement, fine_tuning_requirement, rag_usage, domain_specificity,
-    privacy_requirement, deployment_constraints, integration_constraints,
     setField, nextStep, prevStep, setResults,
   } = useFormStore();
 
@@ -91,12 +94,6 @@ export default function RequirementsForm() {
       current.includes(id) ? current.filter((f) => f !== id) : [...current, id]
     );
   };
-
-  const parseCsv = (value) =>
-    value
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -121,9 +118,6 @@ export default function RequirementsForm() {
         fine_tuning_requirement,
         rag_usage,
         domain_specificity: domain_specificity || null,
-        privacy_requirement: privacy_requirement || null,
-        deployment_constraints,
-        integration_constraints,
       });
       setResults(data.results, data.user_summary);
       navigate("/results");
@@ -144,29 +138,58 @@ export default function RequirementsForm() {
       <Steps current={step} />
 
       <div className="card min-h-[320px] flex flex-col">
-        {/* ── Step 1: Use Case ───────────────────────────────────────────────── */}
+        {/* ── Step 1: Task Type + Modality ───────────────────────────────── */}
         {step === 1 && (
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-white mb-4">What are you building?</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {USE_CASES.map(({ id, icon: Icon, label, desc }) => (
-                <button
-                  key={id}
-                  onClick={() => setField("use_case", id)}
-                  className={clsx(
-                    "flex items-start gap-3 p-4 rounded-xl border text-left transition-all",
-                    use_case === id
-                      ? "bg-blue-600/10 border-blue-500 text-white"
-                      : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600"
-                  )}
-                >
-                  <Icon size={18} className={use_case === id ? "text-blue-400" : "text-gray-500"} />
-                  <div>
-                    <div className="font-medium text-sm">{label}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
-                  </div>
-                </button>
-              ))}
+          <div className="flex-1 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-white mb-2">What are you building?</h2>
+              <p className="text-sm text-gray-400 mb-4">Choose the primary type of task.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {TASK_TYPES.map(({ id, icon: Icon, label, desc }) => (
+                  <button
+                    key={id + label}
+                    type="button"
+                    onClick={() => setField("use_case", id)}
+                    className={clsx(
+                      "flex items-start gap-3 p-4 rounded-xl border text-left transition-all",
+                      use_case === id
+                        ? "bg-blue-600/10 border-blue-500 text-white"
+                        : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600"
+                    )}
+                  >
+                    <Icon size={18} className={use_case === id ? "text-blue-400" : "text-gray-500"} />
+                    <div>
+                      <div className="font-medium text-sm">{label}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-2">What modality do you need?</h3>
+              <p className="text-xs text-gray-400 mb-3">
+                This helps us decide whether you need multimodal models (vision / audio / video).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {MODALITIES.map(({ id, label, desc }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setField("input_data_type", id)}
+                    className={clsx(
+                      "px-3 py-2 rounded-lg border text-left text-xs transition-colors",
+                      input_data_type === id
+                        ? "bg-blue-600/10 border-blue-500 text-blue-300"
+                        : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600"
+                    )}
+                  >
+                    <div className="font-medium">{label}</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">{desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -353,37 +376,8 @@ export default function RequirementsForm() {
           </div>
         )}
 
+        {/* ── Step 6: Review ─────────────────────────────────────────────────── */}
         {step === 6 && (
-          <div className="flex-1 space-y-5">
-            <h2 className="text-lg font-semibold text-white">Constraints</h2>
-            <p className="text-sm text-gray-400">Optional deployment and integration constraints (comma-separated).</p>
-
-            <SelectField label="Privacy Requirement" value={privacy_requirement} onChange={(v) => setField("privacy_requirement", v)} options={SIMPLE_OPTIONS.privacy_requirement} />
-
-            <div>
-              <label className="label">Deployment Constraints</label>
-              <input
-                className="input"
-                placeholder="e.g. us-east, eu-only, on-prem"
-                value={deployment_constraints.join(", ")}
-                onChange={(e) => setField("deployment_constraints", parseCsv(e.target.value))}
-              />
-            </div>
-
-            <div>
-              <label className="label">Integration Constraints</label>
-              <input
-                className="input"
-                placeholder="e.g. python, node, openai-compatible"
-                value={integration_constraints.join(", ")}
-                onChange={(e) => setField("integration_constraints", parseCsv(e.target.value))}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 7: Review ─────────────────────────────────────────────────── */}
-        {step === 7 && (
           <div className="flex-1 space-y-4">
             <h2 className="text-lg font-semibold text-white">Review & Submit</h2>
             <div className="bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
@@ -397,7 +391,6 @@ export default function RequirementsForm() {
               <Row label="Accuracy / Reasoning" value={`${accuracy_requirement || "n/a"} / ${reasoning_complexity || "n/a"}`} />
               <Row label="Latency / Throughput" value={`${latency_requirement || "n/a"} / ${throughput_requirement || "n/a"}`} />
               <Row label="Fine-tuning / RAG" value={`${fine_tuning_requirement ? "yes" : "no"} / ${rag_usage ? "yes" : "no"}`} />
-              <Row label="Privacy" value={privacy_requirement || "standard"} />
             </div>
 
             {error && (
@@ -427,10 +420,10 @@ export default function RequirementsForm() {
             <ChevronLeft size={15} /> Back
           </button>
 
-          {step < 7 && (
+          {step < 6 && (
             <button
               onClick={nextStep}
-              disabled={step === 1 && !use_case}
+              disabled={step === 1 && (!use_case || !input_data_type)}
               className="btn-primary flex items-center gap-1.5 text-sm"
             >
               Next <ChevronRight size={15} />

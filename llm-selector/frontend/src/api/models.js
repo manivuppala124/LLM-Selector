@@ -2,6 +2,7 @@ import api from "./axios";
 
 export const getModels = (params) => api.get("/models/", { params });
 export const getModel  = (id)     => api.get(`/models/${encodeURIComponent(id)}`);
+export const compareModels = (model_ids) => api.post("/models/compare", { model_ids });
 
 export const recommend = (payload)  => api.post("/recommend/", payload);
 export const getHistory = ()        => api.get("/recommend/history");

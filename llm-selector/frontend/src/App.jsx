@@ -7,6 +7,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RequirementsForm from "./pages/RequirementsForm";
 import Results from "./pages/Results";
+import CompareModels from "./pages/CompareModels";
 import Calculator from "./pages/Calculator";
 import PromptLab from "./pages/PromptLab";
 import { useAuthStore } from "./store/authStore";
@@ -38,6 +39,9 @@ export default function App() {
         } />
         <Route path="/results" element={
           <ProtectedRoute><Layout><Results /></Layout></ProtectedRoute>
+        } />
+        <Route path="/compare" element={
+          <ProtectedRoute><Layout><CompareModels /></Layout></ProtectedRoute>
         } />
         <Route path="/calculator" element={
           <ProtectedRoute><Layout><Calculator /></Layout></ProtectedRoute>

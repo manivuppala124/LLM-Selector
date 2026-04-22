@@ -223,6 +223,16 @@ export default function Results() {
           New Analysis
         </button>
         <button
+          onClick={() =>
+            navigate("/compare", {
+              state: { modelIds: results.map((r) => r.model_id) },
+            })
+          }
+          className="btn-secondary text-sm"
+        >
+          Compare Top 3
+        </button>
+        <button
           onClick={() => navigate("/prompt-lab", { state: { preselectedModelIds: results.slice(0, 3).map((r) => r.model_id) } })}
           className="btn-secondary text-sm"
         >

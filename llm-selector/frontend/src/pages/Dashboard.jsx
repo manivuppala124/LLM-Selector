@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Calculator, History, RefreshCw, Loader2, ChevronRight, FlaskConical } from "lucide-react";
+import { Zap, Calculator, History, RefreshCw, Loader2, ChevronRight, FlaskConical, Scale } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useFormStore } from "../store/formStore";
 import { getHistory, syncAll } from "../api/models";
@@ -21,12 +21,18 @@ const CARDS = [
     desc: "Run a live prompt against one or more models and inspect output, latency, and cost.",
     action: "/prompt-lab", cta: "Test Prompt",
   },
+  {
+    icon: Scale, color: "emerald", title: "Compare Models",
+    desc: "Pick 2-5 models and compare quality, speed, context, value, and feature support.",
+    action: "/compare", cta: "Start Comparison",
+  },
 ];
 
 const COLOR = {
   blue:   "bg-blue-600/10 text-blue-400 border-blue-800",
   purple: "bg-purple-600/10 text-purple-400 border-purple-800",
   cyan:   "bg-cyan-600/10 text-cyan-400 border-cyan-800",
+  emerald: "bg-emerald-600/10 text-emerald-400 border-emerald-800",
 };
 
 export default function Dashboard() {

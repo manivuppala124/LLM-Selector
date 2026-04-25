@@ -39,6 +39,8 @@ export default function Dashboard() {
   const navigate  = useNavigate();
   const email     = useAuthStore((s) => s.email);
   const resetForm = useFormStore((s) => s.reset);
+  const setResults = useFormStore((s) => s.setResults);
+  const setField   = useFormStore((s) => s.setField);
 
   const [history, setHistory] = useState([]);
   const [syncing, setSyncing] = useState(false);
@@ -64,6 +66,13 @@ export default function Dashboard() {
   const startNew = () => {
     resetForm();
     navigate("/requirements");
+  };
+
+  const openAnalysis = (h) => {
+    // Hydrate Results page directly from stored history.
+    setResults(h.results || null, h.user_summary || "");
+    if (h.requirements?.use_case) setField("use_case", h.requirements.use_case);
+    navigate("/results");
   };
 
   return (
@@ -123,7 +132,12 @@ export default function Dashboard() {
           </h2>
           <div className="space-y-3">
             {history.slice(0, 5).map((h, i) => (
-              <div key={i} className="card flex items-center justify-between flex-wrap gap-3">
+              <button
+                key={i}
+                type="button"
+                onClick={() => openAnalysis(h)}
+                className="w-full text-left card flex items-center justify-between flex-wrap gap-3 hover:border-gray-700 transition-colors"
+              >
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="badge bg-blue-900/40 text-blue-300 border border-blue-800 capitalize">
@@ -151,6 +165,7 @@ export default function Dashboard() {
                   <p className="text-xs text-gray-500 mt-1.5">
                     {new Date(h.created_at).toLocaleString()}
                   </p>
+                  <p className="text-xs text-blue-400 mt-2">Click to view results</p>
                 </div>
                 <div className="flex gap-2">
                   {h.results?.slice(0, 3).map((r) => (
@@ -159,7 +174,7 @@ export default function Dashboard() {
                     </span>
                   ))}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

@@ -669,12 +669,6 @@ const ticker = [
   "Command R+ · $3 / 1M tokens",
 ];
 
-const testimonials = [
-  { quote: "Saved us days of spreadsheet analysis. Recommended Claude Sonnet over GPT-4o for our use case and the reasoning was spot on.", name: "Arjun M.", role: "ML Engineer" },
-  { quote: "Prompt Lab alone is worth it — finally an apples-to-apples comparison without writing test harnesses myself.", name: "Priya S.", role: "Product Lead" },
-  { quote: "The cost calculator showed our monthly bill would drop 40% switching providers. We switched the next day.", name: "Daniel K.", role: "Startup CTO" },
-];
-
 /* ─── Compare models mock data ─────────────────────────── */
 const ALL_MODELS = [
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "OpenAI", intelligence_index: 88, coding_index: 85, agentic_index: 82, tokens_per_second: 90, ttft: 0.45, context_length: 128000, blended_per_1m: 5.0, open_source: false, multimodal: true, function_calling: true, json_mode: true, fine_tuning: false },
@@ -1038,18 +1032,12 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [tickerPaused, setTickerPaused] = useState(false);
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [showCompare, setShowCompare] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => setActiveTestimonial(p => (p + 1) % testimonials.length), 4500);
-    return () => clearInterval(t);
   }, []);
 
   const goLogin = () => { window.location.href = "/login"; };
@@ -1117,7 +1105,6 @@ export default function LandingPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
             <button className="nl" onClick={() => scrollTo("features")}>Features</button>
             <button className="nl" onClick={() => scrollTo("how")}>How it works</button>
-            <button className="nl" onClick={() => scrollTo("testimonials")}>Reviews</button>
             <button className="nl" onClick={() => setShowCompare(true)} style={{ color: "#F472B6" }}>Compare</button>
             <div style={{ width: 1, height: 18, background: "rgba(255,255,255,.1)" }} />
             <button className="nl" onClick={goLogin}>Sign in</button>
@@ -1388,43 +1375,6 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* ──────────── Testimonials ──────────── */}
-      <section id="testimonials" style={{ padding: "100px max(24px, calc((100vw - 1160px)/2))" }}>
-        <Reveal>
-          <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <span className="pill" style={{ marginBottom: 18, display: "inline-flex" }}>What people say</span>
-            <h2 style={{ fontFamily: "'Instrument Serif', serif", fontSize: "clamp(28px, 4vw, 46px)", fontWeight: 400, letterSpacing: "-1.8px", color: "#EAE8F2", marginTop: 14 }}>
-              Decisions made with confidence
-            </h2>
-          </div>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <div style={{ maxWidth: 680, margin: "0 auto" }}>
-            <div key={activeTestimonial} className="t-enter" style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 22, padding: "48px 52px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: -50, left: "50%", transform: "translateX(-50%)", width: 350, height: 200, background: "radial-gradient(rgba(139,124,248,.07), transparent 70%)", pointerEvents: "none" }} />
-              <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 64, lineHeight: .8, color: "rgba(139,124,248,.2)", marginBottom: 12 }}>"</div>
-              <p style={{ fontFamily: "'Instrument Serif', serif", fontSize: "clamp(17px, 2.5vw, 22px)", color: "#C0BDD2", lineHeight: 1.68, fontWeight: 400, letterSpacing: "-.4px", marginBottom: 36 }}>
-                {testimonials[activeTestimonial].quote}
-              </p>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#7C6AF4,#2DD4BF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "#fff" }}>
-                  {testimonials[activeTestimonial].name[0]}
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "#A8A6BA" }}>{testimonials[activeTestimonial].name}</div>
-                  <div style={{ fontSize: 12, color: "#3E3C52" }}>{testimonials[activeTestimonial].role}</div>
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }}>
-              {testimonials.map((_, i) => (
-                <button key={i} onClick={() => setActiveTestimonial(i)} style={{ width: i === activeTestimonial ? 22 : 6, height: 6, borderRadius: 3, background: i === activeTestimonial ? "#8B7CF8" : "rgba(255,255,255,.12)", border: "none", cursor: "pointer", transition: "all .35s ease", padding: 0 }} />
-              ))}
-            </div>
-          </div>
-        </Reveal>
       </section>
 
       {/* ──────────── CTA ──────────── */}

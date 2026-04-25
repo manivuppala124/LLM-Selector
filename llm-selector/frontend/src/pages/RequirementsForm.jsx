@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Code2, MessageSquare, Bot, BarChart2, Sparkles, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
@@ -12,7 +12,6 @@ const TASK_TYPES = [
   { id: "analysis", icon: BarChart2,     label: "RAG / QA & Analysis", desc: "Question answering over docs, data analysis" },
   { id: "agentic",  icon: Bot,           label: "Agents / Tools",      desc: "Tool-calling agents, workflows, automations" },
   { id: "general",  icon: Sparkles,      label: "Content Generation",  desc: "Blogs, marketing copy, creative writing" },
-  { id: "other",    icon: Sparkles,      label: "Other / Mixed",       desc: "Mixed or experimental use cases" },
 ];
 
 const MODALITIES = [
@@ -37,15 +36,6 @@ const CONTEXT_OPTIONS = [
   { value: 128000, label: "128K" },
   { value: 200000, label: "200K+" },
 ];
-
-const SIMPLE_OPTIONS = {
-  input_data_type: ["text", "code", "image", "audio", "video"],
-  output_format: ["text", "json", "schema", "tool_call"],
-  accuracy_requirement: ["low", "medium", "high"],
-  reasoning_complexity: ["simple", "medium", "complex"],
-  latency_requirement: ["real-time", "interactive", "batch"],
-  reliability_requirement: ["low", "medium", "high"],
-};
 
 // Step progress bar
 function Steps({ current }) {
@@ -78,17 +68,42 @@ export default function RequirementsForm() {
   const navigate = useNavigate();
   const {
     step, use_case, budget, speed_vs_quality, required_features, min_context,
-    input_data_type, input_size_avg_tokens, input_size_max_tokens, output_format, output_length,
-    accuracy_requirement, reasoning_complexity, latency_requirement, throughput_requirement,
-    reliability_requirement, fine_tuning_requirement, rag_usage, domain_specificity,
+    input_data_type, input_size_avg_tokens, input_size_max_tokens, output_length,
+    rag_usage, domain_specificity,
     setField, nextStep, prevStep, setResults,
   } = useFormStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
 
+  // Track whether we auto-enabled function calling so we can safely auto-disable it
+  // only when the user hasn't explicitly chosen it.
+  const autoEnabledFunctionCalling = useRef(false);
+
+  // Interlinks:
+  // - agentic use case => function calling required
+  // - RAG/tool usage => function calling required
+  useEffect(() => {
+    const shouldRequireFunctionCalling = rag_usage || use_case === "agentic";
+    const hasFunctionCalling = required_features.includes("function_calling");
+
+    if (shouldRequireFunctionCalling && !hasFunctionCalling) {
+      setField("required_features", [...required_features, "function_calling"]);
+      autoEnabledFunctionCalling.current = true;
+    }
+
+    if (!shouldRequireFunctionCalling && autoEnabledFunctionCalling.current && hasFunctionCalling) {
+      setField("required_features", required_features.filter((f) => f !== "function_calling"));
+      autoEnabledFunctionCalling.current = false;
+    }
+  }, [rag_usage, use_case, required_features, setField]);
+
   const toggleFeature = (id) => {
     const current = required_features;
+    if (id === "function_calling") {
+      // User is explicitly controlling this feature now.
+      autoEnabledFunctionCalling.current = false;
+    }
     setField(
       "required_features",
       current.includes(id) ? current.filter((f) => f !== id) : [...current, id]
@@ -108,14 +123,10 @@ export default function RequirementsForm() {
         input_data_type: input_data_type || null,
         input_size_avg_tokens: input_size_avg_tokens ? Number(input_size_avg_tokens) : null,
         input_size_max_tokens: input_size_max_tokens ? Number(input_size_max_tokens) : null,
-        output_format: output_format || null,
         output_length: output_length ? Number(output_length) : null,
-        accuracy_requirement: accuracy_requirement || null,
-        reasoning_complexity: reasoning_complexity || null,
-        latency_requirement: latency_requirement || null,
-        throughput_requirement: throughput_requirement ? Number(throughput_requirement) : null,
-        reliability_requirement: reliability_requirement || null,
-        fine_tuning_requirement,
+        // OpenRouter sync currently yields supports_fine_tuning=false for all models,
+        // so treating this as a hard requirement would always produce zero matches.
+        fine_tuning_requirement: false,
         rag_usage,
         domain_specificity: domain_specificity || null,
       });
@@ -333,22 +344,14 @@ export default function RequirementsForm() {
         {step === 5 && (
           <div className="flex-1 space-y-5">
             <h2 className="text-lg font-semibold text-white">Workload Details</h2>
-            <p className="text-sm text-gray-400">These inputs help refine context, cost and quality trade-offs.</p>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <SelectField label="Input Data Type" value={input_data_type} onChange={(v) => setField("input_data_type", v)} options={SIMPLE_OPTIONS.input_data_type} />
-              <SelectField label="Output Format" value={output_format} onChange={(v) => setField("output_format", v)} options={SIMPLE_OPTIONS.output_format} />
-              <SelectField label="Accuracy Need" value={accuracy_requirement} onChange={(v) => setField("accuracy_requirement", v)} options={SIMPLE_OPTIONS.accuracy_requirement} />
-              <SelectField label="Reasoning Complexity" value={reasoning_complexity} onChange={(v) => setField("reasoning_complexity", v)} options={SIMPLE_OPTIONS.reasoning_complexity} />
-              <SelectField label="Latency Profile" value={latency_requirement} onChange={(v) => setField("latency_requirement", v)} options={SIMPLE_OPTIONS.latency_requirement} />
-              <SelectField label="Reliability Need" value={reliability_requirement} onChange={(v) => setField("reliability_requirement", v)} options={SIMPLE_OPTIONS.reliability_requirement} />
-            </div>
+            <p className="text-sm text-gray-400">
+              These inputs refine context and cost. Everything else is inferred from your use case, modality, and required features.
+            </p>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <InputField label="Avg Input Tokens" value={input_size_avg_tokens} onChange={(v) => setField("input_size_avg_tokens", v)} />
               <InputField label="Max Input Tokens" value={input_size_max_tokens} onChange={(v) => setField("input_size_max_tokens", v)} />
               <InputField label="Expected Output Tokens" value={output_length} onChange={(v) => setField("output_length", v)} />
-              <InputField label="Throughput (req/min)" value={throughput_requirement} onChange={(v) => setField("throughput_requirement", v)} />
             </div>
 
             <div>
@@ -362,11 +365,6 @@ export default function RequirementsForm() {
             </div>
 
             <div className="grid sm:grid-cols-2 gap-3">
-              <BooleanToggle
-                label="Need Fine-Tuning Support"
-                checked={fine_tuning_requirement}
-                onToggle={() => setField("fine_tuning_requirement", !fine_tuning_requirement)}
-              />
               <BooleanToggle
                 label="RAG / Tool Usage"
                 checked={rag_usage}
@@ -387,10 +385,9 @@ export default function RequirementsForm() {
               <Row label="Features"     value={required_features.length ? required_features.join(", ") : "None required"} />
               <Row label="Min Context"  value={min_context ? `${min_context.toLocaleString()} tokens` : "Any"} />
               <Row label="Input Type"   value={input_data_type || "Not set"} />
-              <Row label="Output Format" value={output_format || "Not set"} />
-              <Row label="Accuracy / Reasoning" value={`${accuracy_requirement || "n/a"} / ${reasoning_complexity || "n/a"}`} />
-              <Row label="Latency / Throughput" value={`${latency_requirement || "n/a"} / ${throughput_requirement || "n/a"}`} />
-              <Row label="Fine-tuning / RAG" value={`${fine_tuning_requirement ? "yes" : "no"} / ${rag_usage ? "yes" : "no"}`} />
+              <Row label="Avg / Max Input Tokens" value={`${input_size_avg_tokens || "n/a"} / ${input_size_max_tokens || "n/a"}`} />
+              <Row label="Expected Output Tokens" value={output_length || "n/a"} />
+              <Row label="RAG / Tool Usage" value={rag_usage ? "yes" : "no"} />
             </div>
 
             {error && (

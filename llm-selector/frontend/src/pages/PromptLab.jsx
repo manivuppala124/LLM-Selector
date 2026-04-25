@@ -10,6 +10,13 @@ const EXAMPLE_PROMPTS = [
   "Convert this unstructured business requirement into strict JSON.\n\nRequirement text:\n\"We need to launch an AI onboarding assistant for SMB customers by 30 Sep 2026. Budget cap is $300,000 all-in. The assistant must integrate with our existing CRM and support English + Spanish at launch. Assume current auth and billing services can be reused. Major risks are weak prompt quality, legal review delays, and low adoption by sales reps. Success means: reduce onboarding ticket volume by 25% within 60 days, CSAT >= 4.4/5, and median first-response time under 2 minutes.\"\n\nReturn ONLY valid JSON with this schema:\n{\n  \"goal\": \"string\",\n  \"constraints\": [\"string\"],\n  \"assumptions\": [\"string\"],\n  \"risks\": [\"string\"],\n  \"success_metrics\": [\"string\"]\n}\nNo markdown, no commentary.",
 ];
 
+const EXAMPLE_SYSTEM_PROMPTS = [
+  "You are a strict enterprise assistant. Follow instructions exactly, avoid speculation, and state assumptions explicitly when required.",
+  "You are a senior software engineer reviewer. Be concise, prioritize correctness, and output actionable results over explanations.",
+  "You are a JSON-only assistant. Always return valid JSON. Never use markdown, code fences, or additional commentary.",
+  "You are a policy-compliance copilot. Use only provided policy context, cite relevant policy lines, and clearly flag uncertain cases.",
+];
+
 function formatCost(value) {
   const n = Number(value || 0);
   return `$${n.toFixed(6)}`;
@@ -30,6 +37,7 @@ export default function PromptLab() {
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState([]);
   const [history, setHistory] = useState([]);
+  const [activeHistoryId, setActiveHistoryId] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -92,6 +100,7 @@ export default function PromptLab() {
   const handleRun = async () => {
     setError("");
     setResults([]);
+    setActiveHistoryId(null);
     if (!prompt.trim()) {
       setError("Prompt is required");
       return;
@@ -119,6 +128,21 @@ export default function PromptLab() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const loadFromHistory = (entry) => {
+    setError("");
+    setActiveHistoryId(entry.session_id);
+    setSelectedModelIds(entry.request?.model_ids || []);
+    setPrompt(entry.request?.prompt || "");
+    setSystemPrompt(entry.request?.system_prompt || "");
+    setTemperature(entry.request?.temperature ?? 0.7);
+    setMaxTokens(entry.request?.max_tokens ?? 512);
+    setResults(entry.results || []);
+    // bring the results section into view
+    requestAnimationFrame(() => {
+      document.getElementById("prompt-lab-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   return (
@@ -183,7 +207,7 @@ export default function PromptLab() {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="input min-h-28"
+            className="input min-h-44"
             placeholder="Enter user prompt..."
           />
           <div className="space-y-2">
@@ -209,6 +233,22 @@ export default function PromptLab() {
             className="input min-h-20"
             placeholder="Optional system prompt..."
           />
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Example System Prompts</p>
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLE_SYSTEM_PROMPTS.map((sample, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSystemPrompt(sample)}
+                  className="text-xs px-2.5 py-1.5 rounded-md border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                  title="Click to use this system prompt"
+                >
+                  System {idx + 1}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm text-gray-400">
@@ -252,20 +292,33 @@ export default function PromptLab() {
           <h2 className="text-white font-semibold">Recent Prompt Tests</h2>
           {history.length === 0 && <p className="text-sm text-gray-500">No prompt test history yet.</p>}
           {history.map((entry) => (
-            <div key={entry.session_id} className="rounded-lg border border-gray-800 bg-gray-900/50 px-3 py-2">
+            <button
+              key={entry.session_id}
+              type="button"
+              onClick={() => loadFromHistory(entry)}
+              className={[
+                "w-full text-left rounded-lg border px-3 py-2 transition-colors",
+                activeHistoryId === entry.session_id
+                  ? "border-cyan-700 bg-cyan-900/10"
+                  : "border-gray-800 bg-gray-900/50 hover:bg-gray-800/60",
+              ].join(" ")}
+            >
               <p className="text-xs text-gray-500">{new Date(entry.created_at).toLocaleString()}</p>
               <p className="text-sm text-gray-300 mt-1 line-clamp-2">{entry.request?.prompt}</p>
               <p className="text-xs text-gray-500 mt-1">
                 Models: {entry.request?.model_ids?.length || 0} | Success: {(entry.results || []).filter((r) => r.status === "success").length}
               </p>
-            </div>
+              <p className="text-xs text-cyan-400 mt-2">Click to view results</p>
+            </button>
           ))}
         </div>
       </div>
 
       {results.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-white font-semibold">Run Results</h2>
+          <h2 id="prompt-lab-results" className="text-white font-semibold">
+            {activeHistoryId ? "History Results" : "Run Results"}
+          </h2>
           {results.map((r) => (
             <div key={r.model_id} className="card">
               <div className="flex items-center justify-between flex-wrap gap-3">
